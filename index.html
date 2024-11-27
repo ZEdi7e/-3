@@ -3,119 +3,127 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Локальное файловое хранилище</title>
+  <title>Multimedia Application</title>
   <style>
-    /* Основные стили */
-    #drop-zone {
-      border: 2px dashed #ccc;
-      padding: 20px;
-      text-align: center;
-      margin-bottom: 20px;
-      color: #666;
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
     }
-    #file-list {
+    canvas {
+      border: 1px solid #ccc;
+      display: block;
       margin-top: 20px;
     }
-    .file-item {
-      padding: 10px;
-      border: 1px solid #ccc;
-      margin-bottom: 5px;
+    .controls {
+      margin-top: 10px;
     }
   </style>
 </head>
 <body>
-  <h1>Локальное файловое хранилище</h1>
-  
-  <div id="drop-zone">Перетащите файлы сюда или выберите через поле ввода</div>
-  
-  <input type="file" id="file-input" multiple>
-  
+  <h1>Multimedia Application</h1>
+
+  <!-- Audio/Video Section -->
+  <h2>Audio/Video Player</h2>
   <div>
-    <label>Фильтр по типу файла: <input type="text" id="file-type-filter" placeholder="например, image/jpeg"></label>
-    <label>Фильтр по размеру файла (КБ): <input type="number" id="file-size-filter" placeholder="например, 500"></label>
-    <button id="apply-filter">Применить фильтры</button>
+    <video id="videoPlayer" width="480" controls>
+      <source src="video.mp4" type="video/mp4">
+      Your browser does not support the video tag.
+    </video>
+    <br>
+    <audio id="audioPlayer" controls>
+      <source src="audio.mp3" type="audio/mp3">
+      Your browser does not support the audio tag.
+    </audio>
   </div>
   
-  <div id="file-list"></div>
+  <!-- Canvas and Animation Section -->
+  <h2>Canvas Drawing and Animation</h2>
+  <canvas id="drawingCanvas" width="500" height="300"></canvas>
+  <div class="controls">
+    <button id="startAnimation">Start Animation</button>
+    <button id="stopAnimation">Stop Animation</button>
+  </div>
 
-
-
+  <!-- Image Upload and Manipulation -->
+  <h2>Image Upload and Manipulation</h2>
+  <input type="file" id="imageUploader" accept="image/*">
+  <canvas id="imageCanvas" width="500" height="300"></canvas>
+  <div class="controls">
+    <button id="applyFilter">Apply Grayscale Filter</button>
+    <button id="saveImage">Save Image</button>
+  </div>
 
   <script>
-    const dropZone = document.getElementById('drop-zone');
-    const fileInput = document.getElementById('file-input');
-    const fileList = document.getElementById('file-list');
-    const fileTypeFilter = document.getElementById('file-type-filter');
-    const fileSizeFilter = document.getElementById('file-size-filter');
-    const applyFilterButton = document.getElementById('apply-filter');
+    // Audio/Video Controls
+    const videoPlayer = document.getElementById('videoPlayer');
+    const audioPlayer = document.getElementById('audioPlayer');
 
-    dropZone.addEventListener('dragover', (event) => {
-      event.preventDefault();
-      dropZone.style.backgroundColor = '#f0f0f0';
-    });
+    // Canvas Drawing and Animation
+    const drawingCanvas = document.getElementById('drawingCanvas');
+    const ctx = drawingCanvas.getContext('2d');
+    let animationFrameId;
+    let x = 0;
+    let y = 150;
+    const startAnimation = () => {
+      const animate = () => {
+        ctx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
+        ctx.beginPath();
+        ctx.arc(x, y, 20, 0, Math.PI * 2, true);
+        ctx.fillStyle = "blue";
+        ctx.fill();
+        x += 2;
+        if (x > drawingCanvas.width) x = 0;
+        animationFrameId = requestAnimationFrame(animate);
+      };
+      animate();
+    };
 
-    dropZone.addEventListener('dragleave', () => {
-      dropZone.style.backgroundColor = '#ffffff';
-    });
+    const stopAnimation = () => {
+      cancelAnimationFrame(animationFrameId);
+    };
 
-    dropZone.addEventListener('drop', (event) => {
-      event.preventDefault();
-      dropZone.style.backgroundColor = '#ffffff';
-      handleFiles(event.dataTransfer.files);
-    });
+    document.getElementById('startAnimation').addEventListener('click', startAnimation);
+    document.getElementById('stopAnimation').addEventListener('click', stopAnimation);
 
-    fileInput.addEventListener('change', (event) => {
-      handleFiles(event.target.files);
-    });
+    // Image Upload and Manipulation
+    const imageUploader = document.getElementById('imageUploader');
+    const imageCanvas = document.getElementById('imageCanvas');
+    const imageCtx = imageCanvas.getContext('2d');
+    let uploadedImage;
 
-    function handleFiles(files) {
-      Array.from(files).forEach(file => {
-        const fileData = {
-          name: file.name,
-          type: file.type,
-          size: file.size
+    imageUploader.addEventListener('change', (event) => {
+      const file = event.target.files[0];
+      if (file) {
+        const img = new Image();
+        img.onload = () => {
+          imageCtx.clearRect(0, 0, imageCanvas.width, imageCanvas.height);
+          imageCtx.drawImage(img, 0, 0, imageCanvas.width, imageCanvas.height);
+          uploadedImage = img;
         };
-        saveFileToLocalStorage(fileData);
-      });
-      displayFiles();
-    }
+        img.src = URL.createObjectURL(file);
+      }
+    });
 
-    function saveFileToLocalStorage(file) {
-      let files = JSON.parse(localStorage.getItem('files')) || [];
-      files.push(file);
-      localStorage.setItem('files', JSON.stringify(files));
-    }
+    document.getElementById('applyFilter').addEventListener('click', () => {
+      if (uploadedImage) {
+        const imageData = imageCtx.getImageData(0, 0, imageCanvas.width, imageCanvas.height);
+        const data = imageData.data;
+        for (let i = 0; i < data.length; i += 4) {
+          const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
+          data[i] = avg;
+          data[i + 1] = avg;
+          data[i + 2] = avg;
+        }
+        imageCtx.putImageData(imageData, 0, 0);
+      }
+    });
 
-    function displayFiles(filteredFiles) {
-      fileList.innerHTML = '';
-      const files = filteredFiles || JSON.parse(localStorage.getItem('files')) || [];
-      files.forEach(file => {
-        const fileItem = document.createElement('div');
-        fileItem.classList.add('file-item');
-        fileItem.textContent = `Название: ${file.name}, Тип: ${file.type}, Размер: ${(file.size / 1024).toFixed(2)} KB`;
-        fileList.appendChild(fileItem);
-      });
-    }
-
-    function filterFiles() {
-      const files = JSON.parse(localStorage.getItem('files')) || [];
-      const typeFilter = fileTypeFilter.value.trim();
-      const sizeFilter = parseFloat(fileSizeFilter.value) * 1024;
-
-      const filteredFiles = files.filter(file => {
-        const typeMatch = typeFilter ? file.type.includes(typeFilter) : true;
-        const sizeMatch = !isNaN(sizeFilter) ? file.size <= sizeFilter : true;
-        return typeMatch && sizeMatch;
-      });
-
-      displayFiles(filteredFiles);
-    }
-    applyFilterButton.addEventListener('click', filterFiles);
-    displayFiles();
+    document.getElementById('saveImage').addEventListener('click', () => {
+      const link = document.createElement('a');
+      link.download = 'manipulated-image.png';
+      link.href = imageCanvas.toDataURL();
+      link.click();
+    });
   </script>
-
-
-
-
 </body>
 </html>
